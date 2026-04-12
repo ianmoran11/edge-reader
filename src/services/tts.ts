@@ -23,9 +23,43 @@ class EdgeTTSService {
   private isPaused = false;
   private currentSpeed: PlaybackSpeed = 1;
   private listeners: TTSEventListener[] = [];
+  private voicesLoaded = false;
+  private voicesPromise: Promise<SpeechSynthesisVoice[]>;
 
   constructor() {
     this.synth = window.speechSynthesis;
+    this.voicesPromise = this.loadVoices();
+  }
+
+  private loadVoices(): Promise<SpeechSynthesisVoice[]> {
+    return new Promise((resolve) => {
+      const voices = this.synth.getVoices();
+      if (voices.length > 0) {
+        this.voicesLoaded = true;
+        resolve(voices);
+        return;
+      }
+
+      // Wait for voices to load
+      const handleVoicesChanged = () => {
+        const loadedVoices = this.synth.getVoices();
+        if (loadedVoices.length > 0) {
+          this.voicesLoaded = true;
+          this.synth.removeEventListener('voiceschanged', handleVoicesChanged);
+          resolve(loadedVoices);
+        }
+      };
+
+      this.synth.addEventListener('voiceschanged', handleVoicesChanged);
+
+      // Fallback timeout
+      setTimeout(() => {
+        if (!this.voicesLoaded) {
+          this.voicesLoaded = true;
+          resolve(this.synth.getVoices());
+        }
+      }, 1000);
+    });
   }
 
   getSpeedRate(speed: PlaybackSpeed): number {
@@ -55,22 +89,26 @@ class EdgeTTSService {
     this.isPlaying = true;
     this.isPaused = false;
 
+    // Wait for voices to be available
+    const voices = await this.voicesPromise;
+
+    const preferredVoice =
+      voices.find(
+        (v) =>
+          v.lang.startsWith('en') &&
+          v.name.toLowerCase().includes('microsoft')
+      ) ||
+      voices.find((v) => v.lang.startsWith('en')) ||
+      voices[0];
+
     const sentences = this.splitIntoSentences(text);
 
     for (let i = 0; i < sentences.length; i++) {
+      if (!this.isPlaying) break;
+
       const utterance = new SpeechSynthesisUtterance(sentences[i]);
       utterance.rate = this.getSpeedRate(this.currentSpeed);
       utterance.pitch = 1;
-
-      const voices = this.synth.getVoices();
-      const preferredVoice =
-        voices.find(
-          (v) =>
-            v.lang.startsWith('en') &&
-            v.name.toLowerCase().includes('microsoft')
-        ) ||
-        voices.find((v) => v.lang.startsWith('en')) ||
-        voices[0];
 
       if (preferredVoice) {
         utterance.voice = preferredVoice;

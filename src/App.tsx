@@ -762,15 +762,17 @@ export function App() {
         onClick={handleContentClick}
       >
         {chapter && (
-          <>
-            <h1 className="chapter-title">{chapter.title}</h1>
-            <div
+          <article className="chapter-article" role="article">
+            <header>
+              <h1 className="chapter-title">{chapter.title}</h1>
+            </header>
+            <section
               className="chapter-html"
               dangerouslySetInnerHTML={{
                 __html: sanitizeHtml(chapter.htmlContent),
               }}
             />
-          </>
+          </article>
         )}
       </div>
 

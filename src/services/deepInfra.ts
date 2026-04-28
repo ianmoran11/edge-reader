@@ -65,7 +65,10 @@ export async function generateChapterAudio(
       if (!data.audio) {
         throw new Error('No audio in response');
       }
-      const binaryString = atob(data.audio);
+      const base64 = (data.audio as string).includes(',')
+        ? (data.audio as string).split(',')[1]
+        : (data.audio as string);
+      const binaryString = atob(base64);
       const bytes = new Uint8Array(binaryString.length);
       for (let i = 0; i < binaryString.length; i++) {
         bytes[i] = binaryString.charCodeAt(i);

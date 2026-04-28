@@ -465,6 +465,7 @@ export function App() {
     const chapter = chapters[currentChapter];
     if (!chapter) return;
 
+    let errorOccurred = false;
     try {
       await generateChapterAudio(
         currentBookId,
@@ -483,16 +484,22 @@ export function App() {
             );
           },
           onError: (err) => {
+            errorOccurred = true;
             setGenerationProgress(`Error: ${err}`);
           },
         }
       );
     } catch (err) {
-      setGenerationProgress(`Error: ${(err as Error).message}`);
+      if (!errorOccurred) {
+        setGenerationProgress(`Error: ${(err as Error).message}`);
+      }
+      errorOccurred = true;
     }
 
     setIsGenerating(false);
-    setGenerationProgress(null);
+    if (!errorOccurred) {
+      setGenerationProgress(null);
+    }
   }, [currentBookId, currentChapter, chapters, apiKey]);
 
   const handlePlayGeneratedAudio = useCallback(() => {
@@ -890,7 +897,7 @@ function AudioPanel({
                 {isGenerating ? '⏳' : '🎙'}
               </button>
             </div>
-            {isGenerating && generationProgress && (
+            {generationProgress && (
               <p className="generation-progress">{generationProgress}</p>
             )}
             {hasGeneratedAudio && (

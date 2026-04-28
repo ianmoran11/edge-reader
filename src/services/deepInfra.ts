@@ -131,7 +131,9 @@ async function combineAudioBlobs(chunks: ArrayBuffer[]): Promise<ArrayBuffer> {
 
   const audioBuffers: AudioBuffer[] = [];
   for (const chunk of chunks) {
-    const buffer = await audioContext.decodeAudioData(chunk.slice(0));
+    const buffer = await new Promise<AudioBuffer>((resolve, reject) => {
+      audioContext.decodeAudioData(chunk.slice(0), resolve, reject);
+    });
     audioBuffers.push(buffer);
   }
 

@@ -1,7 +1,7 @@
 import { audioDB } from '../db';
 import type { AudioTrack } from '../types';
 
-const DEEPINFRA_API_URL = 'https://api.deepinfra.com/v1/tts/kokoro-82m';
+const DEEPINFRA_API_URL = 'https://api.deepinfra.com/v1/inference/hexgrad/Kokoro-82M';
 
 interface GenerationCallbacks {
   onProgress?: (chapter: number, total: number, message: string) => void;
@@ -61,9 +61,16 @@ export async function generateChapterAudio(
         throw new Error(`API error: ${response.status}`);
       }
 
-      const blob = await response.blob();
-      const arrayBuffer = await blob.arrayBuffer();
-      audioChunks.push(arrayBuffer);
+      const data = await response.json();
+      if (!data.audio) {
+        throw new Error('No audio in response');
+      }
+      const binaryString = atob(data.audio);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      audioChunks.push(bytes.buffer);
     } catch (error) {
       if ((error as Error).name === 'AbortError') {
         callbacks?.onError?.('Generation cancelled');
